@@ -7,17 +7,18 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
-  IUserModel,
   USER_MODEL,
   UserDocument,
 } from 'src/mongodb/schema/user.schema';
 import { SignInDto, SignUpDto } from './dto/auth.dto';
 import { hash } from 'bcrypt';
+import { JwtService } from 'src/middlewares/jwt/jwt.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectModel(USER_MODEL) private readonly userModel: Model<UserDocument>,
+    protected jwt: JwtService
   ) {}
   async signup(createAuthDto: SignUpDto) {
     const { email, password, username } = createAuthDto;
@@ -34,20 +35,18 @@ export class AuthService {
         throw new HttpException('Already have account', HttpStatus.CONFLICT);
       }
       const user = await this.userModel.create({
-        username: createAuthDto.username,
-        email: createAuthDto.email,
+        username: username,
+        email: email,
         password: hashedPassword,
       });
 
       return {
         status: true,
-        data: user,
-        message: 'Successfully Register User',
+        message: 'User Successfully Register',
       };
     } catch (error) {
       return {
         status: false,
-        data: {},
         message: error.message || 'somthing went wrong',
       };
     }
@@ -60,7 +59,6 @@ export class AuthService {
         throw new HttpException('Complete all fields', HttpStatus.BAD_GATEWAY);
       }
 
-      // const user = await this.getUser(email);
       const user = await this.userModel.findOne({ email });
 
       const isPassMatched = await user.isValidPassword(password);
@@ -70,15 +68,20 @@ export class AuthService {
       }
 
       if (!user) {
-        throw new HttpException('User Non found', HttpStatus.NOT_FOUND);
+        throw new HttpException('Credential Incorrect', HttpStatus.NOT_FOUND);
       }
 
       user.password = undefined;
 
+      //create token
+      const token = this.jwt.produceToken(user);
+      const data = {user , token}
+
+
       return {
         status: true,
-        data: user,
-        message: 'User found Successfully',
+        data: data,
+        message: 'User Signin Successfully',
       };
     } catch (error) {
       return {
