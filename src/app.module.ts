@@ -12,11 +12,13 @@ import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from './database/database.module';
 import { JwtModule } from './middlewares/jwt/jwt.module';
 import { JwtMiddleware } from './middlewares/jwt/jwt.middleware';
-import { JWT_CONFIG } from './config/envs/jwt.config';
+import { AppExceptionFilter } from './exception/app-exception.filter';
+import configuration from './config/envs/configuration';
+import { APP_FILTER } from '@nestjs/core';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true, load: [JWT_CONFIG] }),
+    ConfigModule.forRoot({ isGlobal: true, load: configuration, cache: true }),
     DatabaseModule,
     MongooseModelsModule,
     AuthModule,
@@ -25,7 +27,7 @@ import { JWT_CONFIG } from './config/envs/jwt.config';
     JwtModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [{ provide: APP_FILTER , useClass:AppExceptionFilter}],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {

@@ -7,9 +7,10 @@ import {
 
 @Injectable()
 export class MongooseConfigService implements MongooseOptionsFactory {
+  constructor(protected readonly config:ConfigService){}
   createMongooseOptions(): MongooseModuleOptions {
     return {
-      uri: process.env.DBURL, // Replace with your MongoDB URI
+      uri: this.config.get<string>('DB_URL'), 
     };
   }
 }

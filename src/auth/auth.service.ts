@@ -6,10 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import {
-  USER_MODEL,
-  UserDocument,
-} from 'src/mongodb/schema/user.schema';
+import { USER_MODEL, UserDocument } from 'src/mongodb/schema/user.schema';
 import { SignInDto, SignUpDto } from './dto/auth.dto';
 import { hash } from 'bcrypt';
 import { JwtService } from 'src/middlewares/jwt/jwt.service';
@@ -18,7 +15,7 @@ import { JwtService } from 'src/middlewares/jwt/jwt.service';
 export class AuthService {
   constructor(
     @InjectModel(USER_MODEL) private readonly userModel: Model<UserDocument>,
-    protected jwt: JwtService
+    protected jwt: JwtService,
   ) {}
   async signup(createAuthDto: SignUpDto) {
     const { email, password, username } = createAuthDto;
@@ -54,42 +51,35 @@ export class AuthService {
 
   async signIn(signindata: SignInDto) {
     const { email, password } = signindata;
-    try {
-      if (!password && !email) {
-        throw new HttpException('Complete all fields', HttpStatus.BAD_GATEWAY);
-      }
-
-      const user = await this.userModel.findOne({ email });
-
-      const isPassMatched = await user.isValidPassword(password);
-
-      if (!isPassMatched) {
-        throw new UnauthorizedException();
-      }
-
-      if (!user) {
-        throw new HttpException('Credential Incorrect', HttpStatus.NOT_FOUND);
-      }
-
-      user.password = undefined;
-
-      //create token
-      const token = this.jwt.produceToken(user);
-      const data = {user , token}
-
-
-      return {
-        status: true,
-        data: data,
-        message: 'User Signin Successfully',
-      };
-    } catch (error) {
-      return {
-        status: false,
-        data: {},
-        message: error.message || 'somthing went wrong',
-      };
+ 
+    if (!password && !email) {
+      return new HttpException('Complete all fields', HttpStatus.BAD_GATEWAY);
     }
+
+    const user = await this.userModel.findOne({ email });
+
+    const isPassMatched = await user.isValidPassword(password);
+
+    if (!isPassMatched) {
+      throw new HttpException('Unauthorized', HttpStatus.UNAUTHORIZED);
+    }
+
+    if (!user) {
+      return new HttpException('Credential Incorrect', HttpStatus.NOT_FOUND);
+    }
+
+    user.password = undefined;
+
+    //create token
+    const token = this.jwt.produceToken(user);
+    const data = { user, token };
+
+    return {
+      status: true,
+      data: data,
+      message: 'User Signin Successfully',
+    };
+
   }
 
   findAll() {
